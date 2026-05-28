@@ -1,0 +1,9 @@
+{
+  "name": "fm-agent",
+  "version": "0.1.0",
+  "description": "Plugin for using FM-Agent framework with fully automated reasoning for large-scale systems",
+  "author": {
+    "name": "Yuesong Feng",
+    "email": "yuesong-feng@foxmail.com"
+  }
+}

@@ -9,8 +9,7 @@ This is a Claude Code plugin that integrates [FM-Agent](https://github.com/haora
 ## Plugin Structure
 
 ```
-fm-agent-plugin/
-├── .claude-plugin/
+.claude-plugin/
 │   └── plugin.json          # Plugin manifest (name, version, description)
 ├── skills/
 │   ├── install/SKILL.md      # /fm-agent:install - Clone FM-Agent to plugin data dir
@@ -18,6 +17,7 @@ fm-agent-plugin/
 │   ├── run/SKILL.md          # /fm-agent:run     - Execute analysis (background)
 │   ├── export/SKILL.md       # /fm-agent:export  - Export conversation after git commit
 │   ├── diagnose/SKILL.md      # /fm-agent:diagnose - View bug analysis results
+│   ├── auto-fix/SKILL.md     # /fm-agent:auto-fix - Run verification-repair loop
 │   └── help/SKILL.md         # /fm-agent:help    - Show help information
 ```
 
@@ -29,6 +29,7 @@ fm-agent-plugin/
 | `/fm-agent:config` | Show/modify FM-Agent configuration |
 | `/fm-agent:run` | Execute FM-Agent analysis on current project (runs in background) |
 | `/fm-agent:diagnose` | View bug analysis results |
+| `/fm-agent:auto-fix` | Run full-project verification-repair loop |
 | `/fm-agent:help` | Show help information |
 
 ## Key Environment Variables

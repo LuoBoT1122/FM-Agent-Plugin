@@ -13,12 +13,10 @@ This skill runs FM-Agent from the plugin data directory `${CLAUDE_PLUGIN_DATA}/F
 
 ## Argument: `<commit-id>` (optional)
 
-The skill accepts a single optional argument: a git commit id (short or full SHA) to scope the analysis to that commit's changes.
+The skill accepts a single optional argument: a git commit id (short or full SHA) intended to scope the analysis to that commit's changes.
 
 - **Not supplied (null):** run full-project analysis.
-- **Supplied:** run incremental analysis using `--incremental <commit-id>`, which limits FM-Agent to the functions touched by that commit.
-
-Before using a supplied commit id, verify it exists in the current repository with `git rev-parse --verify <commit-id>`. If the verification fails, stop and report the error to the user instead of falling back to full analysis — silently switching modes would surprise the user.
+- **Supplied:** **incremental analysis (`--incremental <commit-id>`) is not yet implemented.** Stop immediately and inform the user that incremental mode is not supported and the run cannot proceed with a commit id. Do not silently fall back to full-project analysis — switching modes without consent would surprise the user. Ask whether they want to run a full-project analysis instead.
 
 ## Invocation Modes
 
@@ -74,7 +72,7 @@ If the directory exists, use AskUserQuestion to confirm with the user how to pro
   - Start fresh (Discard existing results and start a new analysis)
 
 Based on the user's choice:
-- "Resume" → use `--resume` in Step 3
+- "Resume" → **`--resume` is not yet implemented.** Stop immediately and inform the user that resume is not supported and the previous run cannot be resumed. Ask them whether they want to start fresh instead; do not silently fall back to a fresh run.
 - "Start fresh" → remove the existing directory (`rm -rf fm_agent`) and run without `--resume`
 
 If the directory does not exist, proceed to Step 3 without `--resume`.

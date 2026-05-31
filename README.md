@@ -23,7 +23,6 @@ This plugin integrates [FM-Agent](https://github.com/haoran-ding/FM-Agent) into 
 | `/fm-agent:auto-fix` | Run FM-Agent verification-repair loop for the whole codebase |
 | `/fm-agent:run` | Execute FM-Agent analysis on current project without repairing bugs (background) |
 | `/fm-agent:diagnose` | View bug analysis results |
-| `/fm-agent:export` | Export the Claude Code conversation after a git commit |
 | `/fm-agent:help` | Show help information |
 
 ### install
@@ -72,7 +71,6 @@ Session artifacts live under `./fm_agent_plugin/`:
 
 Execute FM-Agent from the plugin data directory to analyze the current project directory (`./`):
 - Verify `${CLAUDE_PLUGIN_DATA}/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
-- Accepts an optional git commit id argument intended for incremental analysis (`--incremental <commit-id>`). **Incremental mode is not yet implemented** — when a commit id is supplied, the skill stops and asks the user whether to run a full-project analysis instead.
 - If `./fm_agent/` already exists, ask the user whether to **resume** or **start fresh**. **Resume (`--resume`) is not yet implemented** — when chosen, the skill stops and asks the user whether to start fresh instead.
 - Launch as a background task so the session is not blocked
 - Schedule periodic polling via the `loop` skill to detect completion, then notify the user with success or failure.
@@ -85,16 +83,6 @@ Read FM-Agent output from `./fm_agent/`:
 - **Summary first**: Show `bug_validation/summary.json` with totals
 - **Details on request**: Show individual bug reports (`<source>--<function>.md`)
 - Bug reports include: specification claim, actual behavior, code evidence, trigger condition, probe script, probe output
-
-### export
-
-Export the Claude Code conversation after a git commit completes. Runs automatically after each `git commit` Bash command — no manual invocation required.
-
-For each commit, the skill writes two files to `./fm_agent_plugin/` in the current project directory:
-- `export-<COMMIT_ID>.md` — Full transcript of conversation turns between this commit and the previous one (or session start, if this is the first in-session commit)
-- `export-<COMMIT_ID>-summary.md` — Concise summary of the user's intent, decisions, and goal-level description of code changes
-
-After writing the export, the skill asks the user whether to run incremental FM-Agent analysis on the just-committed changes (`/fm-agent:run <COMMIT_ID>`). If multiple commits are made in a single session, the skill runs once per commit, scoping each export to the conversation turns belonging to that commit.
 
 ### Output Directory
 

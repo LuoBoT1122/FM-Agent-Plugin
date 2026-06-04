@@ -41,8 +41,8 @@ Workflow:
 - After writing changes, verify `LLM_API_KEY` is set; if not, loop back to the modification step
 
 **Configurable settings** (all stored in `.env`):
-- `LLM_API_KEY` - OpenRouter API key (required for FM-Agent LLM calls)
-- `LLM_API_BASE_URL` - OpenRouter API endpoint (default: `https://openrouter.ai/api/v1`)
+- `LLM_API_KEY` - API key (required for FM-Agent LLM calls)
+- `LLM_API_BASE_URL` - API endpoint (default: `https://openrouter.ai/api/v1`)
 - `LLM_MODEL` - Default model used by FM-Agent (default: `anthropic/claude-sonnet-4.6`)
 - `OPENCODE_MODEL_PROVIDER` - Model provider used by OpenCode (default: `openrouter`)
 

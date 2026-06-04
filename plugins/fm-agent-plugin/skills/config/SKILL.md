@@ -42,7 +42,7 @@ Read file `${CLAUDE_PLUGIN_DATA}/.env` and list configuration as table:
 
 | Parameter                       | Value                          |
 | ------------------------------- | ------------------------------ | 
-| `LLM_API_KEY`            | <current_value>                |
+| `LLM_API_KEY`                   | <current_value>                |
 | `LLM_API_BASE_URL`              | <current_value>                |
 | `LLM_MODEL`                     | <current_value>                |
 | `OPENCODE_MODEL_PROVIDER`       | <current_value>                |

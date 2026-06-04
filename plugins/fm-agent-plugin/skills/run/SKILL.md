@@ -44,9 +44,9 @@ Use this mode for normal callers and direct user requests.
 
 ## Execution Steps
 
-### Step 1: Check for OpenRouter API Key
+### Step 1: Check for API Key
 
-Check whether `${CLAUDE_PLUGIN_DATA}/.env` file exists and contains the OpenRouter API key:
+Check whether `${CLAUDE_PLUGIN_DATA}/.env` file exists and contains the API key:
 
 ```bash
 cat ${CLAUDE_PLUGIN_DATA}/.env
@@ -117,7 +117,7 @@ Use this mode only when the caller is `fm-agent:auto-fix`.
 
 This mode exists so the caller can treat one FM-Agent run as one deterministic verification round. Do not reuse the default background flow, do not ask resume/fresh questions, and do not start a polling loop.
 
-### Step 1: Check for OpenRouter API Key
+### Step 1: Check for API Key
 
 Use the same prerequisite check as in direct-user mode:
 

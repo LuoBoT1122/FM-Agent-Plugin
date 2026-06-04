@@ -9,9 +9,18 @@ This plugin integrates [FM-Agent](https://github.com/fmagent-project/FM-Agent) i
 
 ## How to install
 
+For Claude Code:
+
 ```
+claude
 /plugin marketplace add fmagent-project/FM-Agent-Plugin
 /plugin install fm-agent-plugin@fm-agent-plugin
+```
+
+For codex:
+```
+codex plugin marketplace add fmagent-project/FM-Agent-Plugin
+codex plugin add fm-agent-plugin@fm-agent-plugin
 ```
 
 ## Available Commands

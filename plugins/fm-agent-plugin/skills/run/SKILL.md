@@ -1,7 +1,7 @@
 ---
 name: FM-Agent-Run
-description: Use when the user asks to "run fm-agent", "execute fm-agent", "analyze code with fm-agent", "start reasoning", or wants to run code analysis on the current project. Accepts an optional git commit id argument — when supplied, only the changes introduced by that commit are analyzed (incremental mode).
-version: 0.3.0
+description: Use when the user asks to "run fm-agent", "execute fm-agent", "analyze code with fm-agent", "start reasoning", or wants to run code analysis on the current project. Optionally runs in incremental mode, which analyzes only the functions changed between a base commit and the current working tree; incremental mode requires an intent file describing the goal of the change and a base commit id.
+version: 0.4.0
 allowed-tools: Bash(*), AskUserQuestion, Skill
 ---
 
@@ -11,32 +11,37 @@ Execute FM-Agent to analyze the project codebase for bugs.
 
 This skill runs FM-Agent from the plugin data directory `$HOME/.fm-agent-plugin/FM-Agent` to analyze the current project directory. FM-Agent performs fully automated reasoning using LLM-based Hoare-style verification.
 
-## Argument: `<commit-id>` (optional)
+## Arguments (optional, incremental mode)
 
-The skill accepts a single optional argument: a git commit id (short or full SHA) intended to scope the analysis to that commit's changes.
+Incremental mode requires two values, in the same order as FM-Agent's CLI:
+- `<intent-file>` (`--incremental`): path to a text file describing the goal of the change being analyzed.
+- `<base-commit>` (`--old-commit`): the commit id (short or full SHA) to diff the current working tree against.
 
-- **Not supplied (null):** run full-project analysis.
-- **Supplied:** **incremental analysis (`--incremental <commit-id>`) is not yet implemented.** Stop immediately and inform the user that incremental mode is not supported and the run cannot proceed with a commit id. Do not silently fall back to full-project analysis — switching modes without consent would surprise the user. Ask whether they want to run a full-project analysis instead.
+Rules:
+- **Neither supplied:** run full-project analysis.
+- **Only one of the two supplied:** ask the user for the missing value before running. Incremental mode needs both; FM-Agent errors out if `--incremental` is set without `--old-commit`.
+- Incremental mode maps to `--incremental <intent-file> --old-commit <base-commit>`; both flags are required together.
+
 
 ## Invocation Modes
 
 This file defines two explicit procedures:
 
-- **Default direct-user mode:** the normal `/fm-agent:run` procedure for direct user invocations, including optional incremental analysis with `<commit-id>`.
+- **Default direct-user mode:** the normal `/fm-agent:run` procedure for direct user invocations, including optional incremental analysis with an intent file and a base commit.
 - **Orchestration mode:** a dedicated one-round verification procedure that `fm-agent:auto-fix` must follow when it needs deterministic full-project verification.
 
 Mode selection is by entrypoint, not by implicit runtime caller detection:
 
-- Normal `/fm-agent:run` usage follows **default direct-user mode**.
+- Normal `fm-agent:run` usage follows **default direct-user mode**.
 - `fm-agent:auto-fix` must follow the **orchestration mode** section when it needs one full verification round.
-- Do **not** infer orchestration mode from the presence or absence of `<commit-id>` alone.
+- Do **not** infer orchestration mode from the presence or absence of incremental arguments alone.
 
-In orchestration mode, ignore the optional `<commit-id>` argument entirely. `fm-agent:auto-fix` always requires full-project verification, never incremental verification.
+In orchestration mode, ignore the optional incremental arguments entirely. `fm-agent:auto-fix` always requires full-project verification, never incremental verification.
 
 ## Prerequisites
 
-- `fm-agent:install` executed before to have FM-Agent installed in the plugin data directory `$HOME/.fm-agent-plugin/FM-Agent/`
-- `fm-agent:config` executed before to set up necessary configuration
+- `/fm-agent:install` executed before to have FM-Agent installed in the plugin data directory `$HOME/.fm-agent-plugin/FM-Agent/`
+- `/fm-agent:config` executed before to set up necessary configuration
 
 ## Default Direct-User Mode
 
@@ -52,11 +57,11 @@ Check whether `$HOME/.fm-agent-plugin/.env` file exists and contains the API key
 cat $HOME/.fm-agent-plugin/.env
 ```
 
-If the file or the API key is missing, stop execution and ask the user to run `fm-agent:config` to set up configuration.
+If the file or the API key is missing, stop execution and ask the user to run `/fm-agent:config` to set up configuration.
 
 ### Step 2: Check for Existing Output Directory
 
-Skip this step entirely if a commit id was supplied — incremental runs do not interact with the prior full-run state.
+Skip this step entirely if incremental arguments were supplied — incremental runs do not interact with the prior full-run state.
 
 Otherwise, check whether the `fm_agent/` output directory already exists in the project directory:
 
@@ -72,7 +77,7 @@ If the directory exists, use AskUserQuestion to confirm with the user how to pro
   - Start fresh (Discard existing results and start a new analysis)
 
 Based on the user's choice:
-- "Resume" → **`--resume` is not yet implemented.** Stop immediately and inform the user that resume is not supported and the previous run cannot be resumed. Ask them whether they want to start fresh instead; do not silently fall back to a fresh run.
+- "Resume" → run with the `--resume` flag (see Step 3). Do not delete the existing `fm_agent/` directory; the run continues from the prior run's progress.
 - "Start fresh" → remove the existing directory (`rm -rf fm_agent`) and run without `--resume`
 
 If the directory does not exist, proceed to Step 3 without `--resume`.
@@ -85,20 +90,20 @@ Pick the command based on the arguments:
 
 **Full analysis, with resume:**
 ```bash
-source $HOME/.fm-agent-plugin/.env && python3 $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --resume
+source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --resume
 ```
 
 **Full analysis, without resume:**
 ```bash
-source $HOME/.fm-agent-plugin/.env && python3 $HOME/.fm-agent-plugin/FM-Agent/main.py ./
+source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./
 ```
 
-**Incremental analysis (commit id supplied):**
+**Incremental analysis (intent file + base commit supplied):**
 ```bash
-source $HOME/.fm-agent-plugin/.env && python3 $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --incremental <commit-id>
+source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --incremental <intent-file> --old-commit <base-commit>
 ```
 
-Incremental mode is mutually exclusive with `--resume`: when a commit id is supplied, do not also pass `--resume`, even if a previous `fm_agent/` directory exists. Incremental runs are scoped by the commit, not by the prior run's progress.
+Incremental mode is mutually exclusive with `--resume`: when incremental arguments are supplied, do not also pass `--resume`, even if a previous `fm_agent/` directory exists. Incremental runs are scoped by the base commit, not by the prior run's progress.
 
 **Always launch this as a background task with `run_in_background: true`.** FM-Agent analysis can take a long time — from several minutes for small codebases to hours for large ones — so blocking the session is not acceptable. Capture the returned `task_id` so Step 4 can poll it for completion.
 
@@ -144,7 +149,7 @@ Do not offer `--resume`. Do not attempt to continue a previous run. The orchestr
 Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) against the current project directory (`./`) with no incremental flag and no resume flag:
 
 ```bash
-source $HOME/.fm-agent-plugin/.env && python3 $HOME/.fm-agent-plugin/FM-Agent/main.py ./
+source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./
 ```
 
 Run this synchronously for orchestration mode. Wait for the command to exit before continuing.

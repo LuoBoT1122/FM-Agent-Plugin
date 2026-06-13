@@ -1,7 +1,7 @@
 ---
 name: FM-Agent-Run
 description: Use when the user asks to "run fm-agent", "execute fm-agent", "analyze code with fm-agent", "start reasoning", or wants to run code analysis on the current project. Optionally runs in incremental mode, which analyzes only the functions changed between a base commit and the current working tree; incremental mode requires an intent file describing the goal of the change and a base commit id.
-version: 0.4.0
+version: 0.4.1
 allowed-tools: Bash(*), AskUserQuestion, Skill
 ---
 
@@ -59,7 +59,30 @@ cat $HOME/.fm-agent-plugin/.env
 
 If the file or the API key is missing, stop execution and ask the user to run `/fm-agent:config` to set up configuration.
 
-### Step 2: Check for Existing Output Directory
+### Step 2: Commit Pending Code Changes
+
+Before running FM-Agent analysis, make sure all current code changes are committed so the analysis has a stable git baseline.
+
+Check the working tree:
+
+```bash
+git status --short
+```
+
+If there are uncommitted project changes, commit them before continuing:
+
+```bash
+git add -A -- . ':!fm_agent/**' && { git diff --cached --quiet || git commit -m "chore: save changes before fm-agent analysis"; }
+```
+
+Rules:
+- Include tracked, modified, deleted, and untracked project files in the commit.
+- Do not commit the `fm_agent/` output directory created by prior analysis runs.
+- If `git status --short` only reports files under `fm_agent/`, skip the commit and continue.
+- If the commit fails, stop execution and report the failure; do not run FM-Agent analysis on an uncommitted working tree.
+- If there are no uncommitted project changes, continue without creating a commit.
+
+### Step 3: Check for Existing Output Directory
 
 Skip this step entirely if incremental arguments were supplied — incremental runs do not interact with the prior full-run state.
 
@@ -77,12 +100,12 @@ If the directory exists, use AskUserQuestion to confirm with the user how to pro
   - Start fresh (Discard existing results and start a new analysis)
 
 Based on the user's choice:
-- "Resume" → run with the `--resume` flag (see Step 3). Do not delete the existing `fm_agent/` directory; the run continues from the prior run's progress.
+- "Resume" → run with the `--resume` flag (see Step 4). Do not delete the existing `fm_agent/` directory; the run continues from the prior run's progress.
 - "Start fresh" → remove the existing directory (`rm -rf fm_agent`) and run without `--resume`
 
-If the directory does not exist, proceed to Step 3 without `--resume`.
+If the directory does not exist, proceed to Step 4 without `--resume`.
 
-### Step 3: Run FM-Agent Analysis
+### Step 4: Run FM-Agent Analysis
 
 Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) to analyze the current project directory (`./`). Combine the env sourcing and the run into a single command so the API key is available to the subprocess.
 
@@ -105,13 +128,13 @@ source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Ag
 
 Incremental mode is mutually exclusive with `--resume`: when incremental arguments are supplied, do not also pass `--resume`, even if a previous `fm_agent/` directory exists. Incremental runs are scoped by the base commit, not by the prior run's progress.
 
-**Always launch this as a background task with `run_in_background: true`.** FM-Agent analysis can take a long time — from several minutes for small codebases to hours for large ones — so blocking the session is not acceptable. Capture the returned `task_id` so Step 4 can poll it for completion.
+**Always launch this as a background task with `run_in_background: true`.** FM-Agent analysis can take a long time — from several minutes for small codebases to hours for large ones — so blocking the session is not acceptable. Capture the returned `task_id` so Step 5 can poll it for completion.
 
-### Step 4: Notify User on Completion
+### Step 5: Notify User on Completion
 
 After launching the background task, do **not** wait synchronously. Prefer handing off completion monitoring to a separate polling helper so the user can be notified when the run finishes.
 
-- If the platform provides a polling helper such as a `loop` skill, invoke that helper and pass it the background task handle from Step 3. The helper should poll the task status at an interval appropriate to the expected runtime (for example, 5 minutes for small projects, 15-30 minutes for large ones, or 10 minutes by default)
+- If the platform provides a polling helper such as a `loop` skill, invoke that helper and pass it the background task handle from Step 4. The helper should poll the task status at an interval appropriate to the expected runtime (for example, 5 minutes for small projects, 15-30 minutes for large ones, or 10 minutes by default)
 - If no polling helper is available on the platform, return immediately after launch and tell the user that FM-Agent is running in the background, and that they can run `/fm-agent:diagnose` after the run finishes.
 
 This keeps the direct-user mode actionable even on platforms that do not expose a task-status facility inside this skill itself.
@@ -132,7 +155,13 @@ cat $HOME/.fm-agent-plugin/.env
 
 If the file or API key is missing, stop immediately and report failure to the caller.
 
-### Step 2: Reset Prior Full-Run Output
+### Step 2: Commit Pending Code Changes
+
+Use the same pending-change commit procedure as in direct-user mode before resetting prior output or launching verification.
+
+If committing fails, report failure to the caller and do not run FM-Agent verification.
+
+### Step 3: Reset Prior Full-Run Output
 
 To make the round deterministic, remove any existing `fm_agent/` directory before starting the run.
 
@@ -144,7 +173,7 @@ rm -rf fm_agent
 
 Do not offer `--resume`. Do not attempt to continue a previous run. The orchestration caller needs one fresh full-project round with artifacts produced by this invocation.
 
-### Step 3: Run Exactly One Full-Project Verification Round
+### Step 4: Run Exactly One Full-Project Verification Round
 
 Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) against the current project directory (`./`) with no incremental flag and no resume flag:
 
@@ -154,9 +183,9 @@ source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Ag
 
 Run this synchronously for orchestration mode. Wait for the command to exit before continuing.
 
-This command exit is **not** the completion check by itself. A round is complete only after Step 4 succeeds.
+This command exit is **not** the completion check by itself. A round is complete only after Step 5 succeeds.
 
-### Step 4: Completion Check and Artifact Readiness
+### Step 5: Completion Check and Artifact Readiness
 
 After the FM-Agent command exits, verify that:
 
@@ -174,9 +203,9 @@ This is the round completion check for orchestration mode.
 - If both conditions hold, the verification round succeeded and `fm_agent/bug_validation/summary.json` is ready for the caller to read immediately.
 - If either condition fails, treat the round as failed. Do not claim that verification artifacts are ready.
 
-### Step 5: Report Success vs Failure To The Caller
+### Step 6: Report Success vs Failure To The Caller
 
-Return control to `fm-agent:auto-fix` only after the Step 4 completion check finishes.
+Return control to `fm-agent:auto-fix` only after the Step 5 completion check finishes.
 
 The caller learns the result from this skill's final report for the invocation:
 

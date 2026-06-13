@@ -50,8 +50,8 @@ Workflow:
 
 Execute FM-Agent from the plugin data directory to analyze the current project directory (`./`):
 - Verify `$HOME/.fm-agent-plugin/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
-- Accepts an optional git commit id argument intended for incremental analysis. **Incremental mode is not yet implemented** — when a commit id is supplied, the skill stops and asks whether to run a full-project analysis instead.
-- If `./fm_agent/` already exists, ask the user whether to **resume** or **start fresh**. **Resume is not yet implemented** — when chosen, the skill stops and asks whether to start fresh instead.
+- Optionally runs incremental analysis: supply an intent file and a base commit, and FM-Agent analyzes only the functions changed between that commit and the working tree (`--incremental <intent-file> --old-commit <base-commit>`).
+- If `./fm_agent/` already exists, ask the user whether to **resume** (continue the previous run with `--resume`) or **start fresh** (discard and re-run). 
 - Launch as a background task so the session is not blocked
 - Schedule periodic polling via the `loop` skill to detect completion, then notify the user with success or failure.
 

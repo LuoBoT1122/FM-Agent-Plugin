@@ -2,7 +2,7 @@
 name: FM-Agent-Config
 description: Use when the user asks to "configure fm-agent", "config fm-agent", "show fm-agent configuration", "set fm-agent model", "set fm-agent api key", or needs to modify FM-Agent configuration.
 version: 0.3.0
-allowed-tools: Read, Write, AskUserQuestion
+allowed-tools: Read, Write, AskUserQuestion, Bash(*)
 ---
 
 Configure FM-Agent settings in the plugin data directory.
